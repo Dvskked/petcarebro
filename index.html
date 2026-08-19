@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCare Pro - Sistema de Cuidado de Mascotas</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+  <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><i class="fa-solid fa-paw"></i><span>PetCare <strong>Pro</strong></span></div>
+      <button id="mobile-menu-close" class="mobile-close" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="active"><a href="#" data-section="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a></li>
+        <li><a href="#" data-section="pets"><i class="fa-solid fa-paw"></i><span>Mascotas</span></a></li>
+        <li><a href="#" data-section="walks"><i class="fa-solid fa-shoe-prints"></i><span>Paseos</span></a></li>
+        <li><a href="#" data-section="feeding"><i class="fa-solid fa-bowl-food"></i><span>Alimentacion</span></a></li>
+        <li><a href="#" data-section="vet"><i class="fa-solid fa-stethoscope"></i><span>Veterinaria</span></a></li>
+        <li><a href="#" data-section="activities"><i class="fa-solid fa-clock-rotate-left"></i><span>Actividades</span></a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar"><i class="fa-solid fa-user-shield"></i></div>
+        <div><strong>Admin PetCare</strong><span>admin@petcare.com</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <button id="mobile-menu-toggle" class="mobile-toggle"><i class="fa-solid fa-bars"></i></button>
+      <h1 id="section-title">Dashboard</h1>
+      <div class="topbar-actions">
+        <button id="notif-btn" class="notif-btn"><i class="fa-solid fa-bell"></i><span id="notif-badge" class="notif-badge">0</span></button>
+      </div>
+    </header>
+
+    <div id="notif-panel" class="notif-panel hidden">
+      <div class="notif-panel-header"><h3>Notificaciones</h3></div>
+      <div id="notif-list" class="notif-list"></div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- DASHBOARD -->
+      <section id="section-dashboard" class="content-section">
+        <div id="stats-grid" class="stats-grid"></div>
+        <div class="dashboard-grid">
+          <div class="dashboard-card">
+            <div class="card-header"><h3><i class="fa-solid fa-paw"></i> Mis Mascotas</h3></div>
+            <div id="recent-pets" class="recent-pets-list"></div>
+          </div>
+          <div class="dashboard-card">
+            <div class="card-header"><h3><i class="fa-solid fa-shoe-prints"></i> Paseos Hoy</h3></div>
+            <div id="upcoming-walks" class="upcoming-list"></div>
+          </div>
+          <div class="dashboard-card">
+            <div class="card-header"><h3><i class="fa-solid fa-calendar-check"></i> Proximas Citas</h3></div>
+            <div id="upcoming-apts" class="upcoming-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MASCOTAS -->
+      <section id="section-pets" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Gestiona todas las mascotas registradas en el sistema</p>
+          <button class="btn btn-primary" onclick="app.showAddPetModal()"><i class="fa-solid fa-plus"></i> Agregar Mascota</button>
+        </div>
+        <div id="pets-grid" class="pets-grid"></div>
+      </section>
+
+      <!-- PASEOS -->
+      <section id="section-walks" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Programa y administra los paseos diarios de cada mascota</p>
+          <button class="btn btn-primary" onclick="app.showAddWalkModal()"><i class="fa-solid fa-plus"></i> Agregar Paseo</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Mascota</th><th>Dia</th><th>Horario</th><th>Duracion</th><th>Ruta</th><th>Notas</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="walks-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ALIMENTACION -->
+      <section id="section-feeding" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Controla la dieta y horarios de alimentacion de cada mascota</p>
+          <button class="btn btn-primary" onclick="app.showAddFeedingModal()"><i class="fa-solid fa-plus"></i> Agregar Alimentacion</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Mascota</th><th>Comida</th><th>Cantidad</th><th>Horario</th><th>Frecuencia</th><th>Indicaciones</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="feeding-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VETERINARIA -->
+      <section id="section-vet" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Registro de citas veterinarias, diagnosticos y tratamientos</p>
+          <button class="btn btn-primary" onclick="app.showAddVetModal()"><i class="fa-solid fa-plus"></i> Agendar Cita</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Mascota</th><th>Fecha</th><th>Hora</th><th>Motivo</th><th>Veterinario</th><th>Clinica</th><th>Estado</th><th>Costo</th><th>Acciones</th></tr></thead>
+            <tbody id="vet-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ACTIVIDADES -->
+      <section id="section-activities" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Historial completo de actividades realizadas con cada mascota</p>
+          <button class="btn btn-primary" onclick="app.showAddActivityModal()"><i class="fa-solid fa-plus"></i> Registrar Actividad</button>
+        </div>
+        <div id="activities-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL: Detalle Mascota -->
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <button id="close-detail-modal" class="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      <div id="detail-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar/Editar Mascota -->
+  <div id="pet-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal('pet-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="pet-modal-title">Agregar Mascota</h2>
+      <form id="pet-form" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Nombre</label><input type="text" name="nombre" required placeholder="Ej: Max"></div>
+          <div class="form-group"><label>Especie</label><select name="especie" required>
+            <option value="">Seleccionar</option><option value="perro">Perro</option><option value="gato">Gato</option><option value="conejo">Conejo</option><option value="ave">Ave</option><option value="otro">Otro</option>
+          </select></div>
+          <div class="form-group"><label>Raza</label><input type="text" name="raza" required placeholder="Ej: Labrador"></div>
+          <div class="form-group"><label>Edad (anos)</label><input type="number" name="edad" required min="0" max="30" placeholder="Ej: 3"></div>
+          <div class="form-group"><label>Peso (kg)</label><input type="number" name="peso" required min="0" step="0.1" placeholder="Ej: 12.5"></div>
+          <div class="form-group"><label>Tamano</label><select name="tamano" required>
+            <option value="">Seleccionar</option><option value="pequeno">Pequeno</option><option value="mediano">Mediano</option><option value="grande">Grande</option>
+          </select></div>
+          <div class="form-group"><label>Genero</label><select name="genero" required>
+            <option value="">Seleccionar</option><option value="macho">Macho</option><option value="hembra">Hembra</option>
+          </select></div>
+          <div class="form-group"><label>Color</label><input type="text" name="color" required placeholder="Ej: Dorado"></div>
+          <div class="form-group"><label>Estado de Salud</label><select name="estadoSalud" required>
+            <option value="saludable">Saludable</option><option value="en tratamiento">En tratamiento</option><option value="urgente">Urgente</option>
+          </select></div>
+          <div class="form-group full-width"><label>Notas</label><textarea name="notas" rows="3" placeholder="Informacion adicional sobre la mascota..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('pet-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar/Editar Paseo -->
+  <div id="walk-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal('walk-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="walk-modal-title">Agregar Paseo</h2>
+      <form id="walk-form" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Mascota</label><select id="walk-pet-select" name="mascotaId" required></select></div>
+          <div class="form-group"><label>Dia de la Semana</label><select name="diaSemana" required>
+            <option value="">Seleccionar</option><option value="lunes">Lunes</option><option value="martes">Martes</option><option value="miercoles">Miercoles</option><option value="jueves">Jueves</option><option value="viernes">Viernes</option><option value="sabado">Sabado</option><option value="domingo">Domingo</option>
+          </select></div>
+          <div class="form-group"><label>Hora Inicio</label><input type="time" name="horaInicio" required></div>
+          <div class="form-group"><label>Hora Fin</label><input type="time" name="horaFin" required></div>
+          <div class="form-group"><label>Duracion (min)</label><input type="number" name="duracion" required min="5" max="180" placeholder="Ej: 45"></div>
+          <div class="form-group full-width"><label>Ruta / Lugar</label><input type="text" name="ruta" required placeholder="Ej: Parque Central"></div>
+          <div class="form-group full-width"><label>Notas</label><textarea name="notas" rows="2" placeholder="Detalles del paseo..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('walk-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar/Editar Alimentacion -->
+  <div id="feeding-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal('feeding-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="feeding-modal-title">Agregar Alimentacion</h2>
+      <form id="feeding-form" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Mascota</label><select id="feeding-pet-select" name="mascotaId" required></select></div>
+          <div class="form-group"><label>Tipo de Comida</label><input type="text" name="tipoComida" required placeholder="Ej: Croquetas premium"></div>
+          <div class="form-group"><label>Cantidad</label><input type="text" name="cantidad" required placeholder="Ej: 200g"></div>
+          <div class="form-group"><label>Horario</label><input type="time" name="horario" required></div>
+          <div class="form-group"><label>Frecuencia</label><select name="frecuencia" required>
+            <option value="diaria">Diaria</option><option value="cada 8h">Cada 8 horas</option><option value="cada 12h">Cada 12 horas</option><option value="semanal">Semanal</option>
+          </select></div>
+          <div class="form-group full-width"><label>Indicaciones</label><textarea name="indicaciones" rows="2" placeholder="Detalles importantes sobre la alimentacion..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('feeding-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar/Editar Cita Veterinaria -->
+  <div id="vet-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal('vet-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <h2 id="vet-modal-title">Agendar Cita Veterinaria</h2>
+      <form id="vet-form" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Mascota</label><select id="vet-pet-select" name="mascotaId" required></select></div>
+          <div class="form-group"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="form-group"><label>Hora</label><input type="time" name="hora" required></div>
+          <div class="form-group"><label>Motivo</label><input type="text" name="motivo" required placeholder="Ej: Vacunacion anual"></div>
+          <div class="form-group"><label>Veterinario</label><input type="text" name="veterinario" required placeholder="Ej: Dr. Garcia"></div>
+          <div class="form-group"><label>Clinica</label><input type="text" name="clinica" required placeholder="Ej: Vet Patitas"></div>
+          <div class="form-group"><label>Estado</label><select name="estado" required>
+            <option value="pendiente">Pendiente</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option>
+          </select></div>
+          <div class="form-group"><label>Costo ($)</label><input type="number" name="costo" min="0" placeholder="Ej: 500"></div>
+          <div class="form-group full-width"><label>Diagnostico</label><textarea name="diagnostico" rows="2" placeholder="Observaciones del veterinario..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('vet-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar Actividad -->
+  <div id="activity-modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="app.closeModal('activity-modal')"><i class="fa-solid fa-xmark"></i></button>
+      <h2>Registrar Actividad</h2>
+      <form id="activity-form" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Mascota</label><select id="activity-pet-select" name="mascotaId" required></select></div>
+          <div class="form-group"><label>Tipo de Actividad</label><select name="tipo" required>
+            <option value="paseo">Paseo</option><option value="alimentacion">Alimentacion</option><option value="medicinas">Medicina</option><option value="banio">Bano</option><option value="juego">Juego</option><option value="vacunacion">Vacunacion</option>
+          </select></div>
+          <div class="form-group"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="form-group"><label>Hora</label><input type="time" name="hora" required></div>
+          <div class="form-group full-width"><label>Descripcion</label><textarea name="descripcion" rows="3" required placeholder="Describe la actividad realizada..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('activity-modal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/database.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
