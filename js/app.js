@@ -6,19 +6,81 @@ class PetCareApp {
     this.editingWalkId = null;
     this.editingFeedingId = null;
     this.editingAptId = null;
+    this.searchQuery = "";
+    this.calendarDate = new Date();
+    this.currentTheme = localStorage.getItem("petcare_theme") || "dark";
   }
 
   init() {
     db.seedDemoData();
+    this.applyTheme();
     this.bindNavigation();
     this.bindNotifications();
     this.renderDashboard();
     this.updateNotificationBadge();
     this.checkScheduledTasks();
     this.setupMobileMenu();
+    this.animateCounters();
     setInterval(() => this.checkScheduledTasks(), 60000);
   }
 
+  // ========== THEME ==========
+  applyTheme() {
+    document.documentElement.setAttribute("data-theme", this.currentTheme);
+    const icon = document.querySelector("#theme-toggle i");
+    if (icon) {
+      icon.className = this.currentTheme === "dark" ? "fa-solid fa-moon" : "fa-solid fa-sun";
+    }
+  }
+
+  toggleTheme() {
+    this.currentTheme = this.currentTheme === "dark" ? "light" : "dark";
+    localStorage.setItem("petcare_theme", this.currentTheme);
+    this.applyTheme();
+    this.showToast(this.currentTheme === "dark" ? "Modo oscuro activado" : "Modo claro activado", "info");
+  }
+
+  // ========== CONFETTI ==========
+  triggerConfetti() {
+    const container = document.getElementById("confetti-container");
+    if (!container) return;
+    const colors = ["#6c5ce7", "#fd79a8", "#00cec9", "#feca57", "#ff6b6b", "#a29bfe", "#55efc4"];
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      piece.style.left = Math.random() * 100 + "%";
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = (2 + Math.random() * 2) + "s";
+      piece.style.animationDelay = Math.random() * 0.5 + "s";
+      piece.style.width = (6 + Math.random() * 8) + "px";
+      piece.style.height = (6 + Math.random() * 8) + "px";
+      piece.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+      container.appendChild(piece);
+      setTimeout(() => piece.remove(), 4000);
+    }
+  }
+
+  // ========== COUNTER ANIMATION ==========
+  animateCounters() {
+    const statNumbers = document.querySelectorAll(".stat-number");
+    statNumbers.forEach(el => {
+      const target = parseInt(el.textContent);
+      if (isNaN(target)) return;
+      let current = 0;
+      const increment = Math.max(1, Math.floor(target / 30));
+      const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+          el.textContent = target;
+          clearInterval(timer);
+        } else {
+          el.textContent = current;
+        }
+      }, 30);
+    });
+  }
+
+  // ========== MOBILE ==========
   setupMobileMenu() {
     const toggle = document.getElementById("mobile-menu-toggle");
     const sidebar = document.getElementById("sidebar");
@@ -33,6 +95,7 @@ class PetCareApp {
     });
   }
 
+  // ========== NAVIGATION ==========
   bindNavigation() {
     document.querySelectorAll("[data-section]").forEach(el => {
       el.addEventListener("click", (e) => {
@@ -47,6 +110,89 @@ class PetCareApp {
     });
   }
 
+  navigateTo(section) {
+    this.currentSection = section;
+    document.querySelectorAll(".content-section").forEach(s => s.classList.add("hidden"));
+    document.querySelectorAll("[data-section]").forEach(el => el.closest("li")?.classList.remove("active"));
+    const target = document.getElementById(`section-${section}`);
+    target?.classList.remove("hidden");
+    document.querySelector(`[data-section="${section}"]`)?.closest("li")?.classList.add("active");
+    const titles = {
+      dashboard: "Dashboard", pets: "Mascotas", walks: "Paseos",
+      feeding: "Alimentacion", vet: "Veterinaria", activities: "Actividades", calendar: "Calendario"
+    };
+    document.getElementById("section-title").textContent = titles[section] || section;
+
+    switch (section) {
+      case "dashboard": this.renderDashboard(); break;
+      case "pets": this.renderPets(); break;
+      case "walks": this.renderWalks(); break;
+      case "feeding": this.renderFeeding(); break;
+      case "vet": this.renderVetAppointments(); break;
+      case "activities": this.renderActivities(); break;
+      case "calendar": this.renderCalendar(); break;
+    }
+  }
+
+  // ========== SEARCH ==========
+  handleSearch(query) {
+    this.searchQuery = query.toLowerCase().trim();
+    if (!this.searchQuery) {
+      this.navigateTo(this.currentSection);
+      return;
+    }
+    const results = [];
+    db.getAllPets().forEach(p => {
+      if (p.nombre.toLowerCase().includes(this.searchQuery) || p.raza.toLowerCase().includes(this.searchQuery) || p.especie.includes(this.searchQuery)) {
+        results.push({ type: "mascota", icon: "fa-paw", label: p.nombre, sub: `${p.raza} - ${p.estadoSalud}`, id: p.id, section: "pets" });
+      }
+    });
+    db.getAllWalks().forEach(w => {
+      const pet = db.getPetById(w.mascotaId);
+      if (pet && (pet.nombre.toLowerCase().includes(this.searchQuery) || w.ruta.toLowerCase().includes(this.searchQuery) || w.diaSemana.includes(this.searchQuery))) {
+        results.push({ type: "paseo", icon: "fa-shoe-prints", label: `${pet.nombre} - ${w.diaSemana}`, sub: w.ruta, section: "walks" });
+      }
+    });
+    db.getAllVetAppointments().forEach(a => {
+      const pet = db.getPetById(a.mascotaId);
+      if (pet && (pet.nombre.toLowerCase().includes(this.searchQuery) || a.motivo.toLowerCase().includes(this.searchQuery) || a.veterinario.toLowerCase().includes(this.searchQuery))) {
+        results.push({ type: "cita", icon: "fa-stethoscope", label: `${pet.nombre} - ${a.motivo}`, sub: `${a.fecha} ${a.hora}`, section: "vet" });
+      }
+    });
+    db.getAllFeeding().forEach(f => {
+      const pet = db.getPetById(f.mascotaId);
+      if (pet && (pet.nombre.toLowerCase().includes(this.searchQuery) || f.tipoComida.toLowerCase().includes(this.searchQuery))) {
+        results.push({ type: "alimentacion", icon: "fa-bowl-food", label: `${pet.nombre} - ${f.tipoComida}`, sub: f.horario, section: "feeding" });
+      }
+    });
+    this.renderSearchResults(results);
+  }
+
+  renderSearchResults(results) {
+    document.querySelectorAll(".content-section").forEach(s => s.classList.add("hidden"));
+    document.getElementById("section-title").textContent = `Busqueda (${results.length} resultados)`;
+    const petsSection = document.getElementById("section-pets");
+    petsSection?.classList.remove("hidden");
+    const grid = document.getElementById("pets-grid");
+    if (!grid) return;
+    if (results.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-magnifying-glass" style="font-size:3rem;color:var(--primary-light);margin-bottom:16px;display:block;"></i><p>No se encontraron resultados para "${this.searchQuery}"</p></div>`;
+      return;
+    }
+    grid.innerHTML = results.map(r => `
+      <div class="pet-card" onclick="app.navigateTo('${r.section}')" style="cursor:pointer;">
+        <div class="pet-card-header">
+          <div class="pet-avatar" style="font-size:1.2rem;"><i class="fa-solid ${r.icon}"></i></div>
+          <span class="status-badge" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);">${r.type}</span>
+        </div>
+        <div class="pet-card-body">
+          <h3 style="-webkit-text-fill-color:var(--text);">${r.label}</h3>
+          <p class="pet-breed">${r.sub}</p>
+        </div>
+      </div>`).join("");
+  }
+
+  // ========== NOTIFICATIONS ==========
   bindNotifications() {
     const btn = document.getElementById("notif-btn");
     btn?.addEventListener("click", (e) => {
@@ -64,26 +210,31 @@ class PetCareApp {
     });
   }
 
-  navigateTo(section) {
-    this.currentSection = section;
-    document.querySelectorAll(".content-section").forEach(s => s.classList.add("hidden"));
-    document.querySelectorAll("[data-section]").forEach(el => el.closest("li")?.classList.remove("active"));
-    const target = document.getElementById(`section-${section}`);
-    target?.classList.remove("hidden");
-    document.querySelector(`[data-section="${section}"]`)?.closest("li")?.classList.add("active");
-    const titles = {
-      dashboard: "Dashboard", pets: "Mascotas", walks: "Paseos",
-      feeding: "Alimentacion", vet: "Veterinaria", activities: "Actividades"
-    };
-    document.getElementById("section-title").textContent = titles[section] || section;
+  renderNotifications() {
+    const notifs = db.getAllNotifications().reverse().slice(0, 20);
+    const list = document.getElementById("notif-list");
+    if (!list) return;
+    list.innerHTML = notifs.length === 0
+      ? '<p class="notif-empty">Sin notificaciones</p>'
+      : notifs.map(n => `
+        <div class="notif-item notif-${n.tipo} ${n.leida ? 'notif-read' : ''}" onclick="app.markNotifRead('${n.id}')">
+          <div class="notif-icon"><i class="fa-solid ${n.tipo === 'urgente' ? 'fa-circle-exclamation' : n.tipo === 'alerta' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i></div>
+          <div class="notif-body"><strong>${n.titulo}</strong><p>${n.mensaje}</p><span class="notif-time">${new Date(n.fecha).toLocaleString()}</span></div>
+        </div>`).join("");
+  }
 
-    switch (section) {
-      case "dashboard": this.renderDashboard(); break;
-      case "pets": this.renderPets(); break;
-      case "walks": this.renderWalks(); break;
-      case "feeding": this.renderFeeding(); break;
-      case "vet": this.renderVetAppointments(); break;
-      case "activities": this.renderActivities(); break;
+  markNotifRead(id) {
+    db.markNotificationAsRead(id);
+    this.updateNotificationBadge();
+    this.renderNotifications();
+  }
+
+  updateNotificationBadge() {
+    const count = db.getUnreadNotifications().length;
+    const badge = document.getElementById("notif-badge");
+    if (badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? "flex" : "none";
     }
   }
 
@@ -94,16 +245,17 @@ class PetCareApp {
     const statsGrid = document.getElementById("stats-grid");
     if (statsGrid) {
       statsGrid.innerHTML = `
-        <div class="stat-card"><div class="stat-icon" style="background:var(--primary-light);color:var(--primary)"><i class="fa-solid fa-paw"></i></div>
+        <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,rgba(108,92,231,0.2),rgba(108,92,231,0.05));color:var(--primary-light)"><i class="fa-solid fa-paw"></i></div>
           <div class="stat-info"><span class="stat-number">${stats.totalMascotas}</span><span class="stat-label">Mascotas</span></div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fa-solid fa-shoe-prints"></i></div>
+        <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,rgba(0,184,148,0.2),rgba(0,184,148,0.05));color:var(--success)"><i class="fa-solid fa-shoe-prints"></i></div>
           <div class="stat-info"><span class="stat-number">${stats.paseosHoy}</span><span class="stat-label">Paseos Hoy</span></div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:#fff3e0;color:#e65100"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,rgba(254,202,87,0.2),rgba(254,202,87,0.05));color:var(--warning)"><i class="fa-solid fa-calendar-check"></i></div>
           <div class="stat-info"><span class="stat-number">${stats.citasPendientes}</span><span class="stat-label">Citas Pendientes</span></div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:#fce4ec;color:#c62828"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,rgba(255,107,107,0.2),rgba(255,107,107,0.05));color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i></div>
           <div class="stat-info"><span class="stat-number">${stats.alertasActivas}</span><span class="stat-label">Alertas</span></div></div>
-        <div class="stat-card"><div class="stat-icon" style="background:#e3f2fd;color:#1565c0"><i class="fa-solid fa-bowl-food"></i></div>
+        <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,rgba(84,160,255,0.2),rgba(84,160,255,0.05));color:var(--info)"><i class="fa-solid fa-bowl-food"></i></div>
           <div class="stat-info"><span class="stat-number">${stats.alimentacionesPendientes}</span><span class="stat-label">Alimentaciones</span></div></div>`;
+      this.animateCounters();
     }
 
     const recentPetsEl = document.getElementById("recent-pets");
@@ -156,8 +308,8 @@ class PetCareApp {
     const pets = db.getAllPets();
     const grid = document.getElementById("pets-grid");
     if (!grid) return;
-    grid.innerHTML = pets.map(p => `
-      <div class="pet-card">
+    grid.innerHTML = pets.map((p, i) => `
+      <div class="pet-card" style="animation-delay:${i * 0.1}s;">
         <div class="pet-card-header">
           <div class="pet-avatar">${this.getSpeciesEmoji(p.especie)}</div>
           <div class="pet-card-actions">
@@ -188,6 +340,8 @@ class PetCareApp {
     const apts = db.getVetAppointmentsByPet(id);
     const weightRecords = db.getWeightByPet(id).slice(-5);
 
+    const healthScore = this.calculateHealthScore(pet, apts);
+
     const modal = document.getElementById("detail-modal");
     const content = document.getElementById("detail-modal-content");
     if (!modal || !content) return;
@@ -199,6 +353,15 @@ class PetCareApp {
           <h2>${pet.nombre}</h2>
           <p>${pet.raza} &bull; ${pet.color} &bull; ${pet.tamano}</p>
           <span class="status-badge status-${pet.estadoSalud}">${pet.estadoSalud}</span>
+        </div>
+      </div>
+      <div class="health-score">
+        <div class="health-score-circle" style="background:conic-gradient(${healthScore >= 70 ? 'var(--success)' : healthScore >= 40 ? 'var(--warning)' : 'var(--danger)'} ${healthScore * 3.6}deg, var(--border) 0);">
+          <span style="position:absolute;inset:6px;background:var(--surface-solid);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:900;">${healthScore}</span>
+        </div>
+        <div class="health-score-info">
+          <strong>Score de Salud</strong>
+          <span>${healthScore >= 70 ? 'Buena salud general' : healthScore >= 40 ? 'Requiere atencion' : 'Estado critico - revisar'}</span>
         </div>
       </div>
       <div class="detail-tabs">
@@ -271,6 +434,19 @@ class PetCareApp {
     modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
   }
 
+  calculateHealthScore(pet, apts) {
+    let score = 50;
+    if (pet.estadoSalud === "saludable") score += 30;
+    else if (pet.estadoSalud === "en tratamiento") score += 10;
+    else score -= 10;
+    if (pet.vacunas.length > 0) score += Math.min(pet.vacunas.length * 5, 15);
+    const completedApts = apts.filter(a => a.estado === "completada").length;
+    if (completedApts > 0) score += Math.min(completedApts * 3, 10);
+    const urgentApts = apts.filter(a => a.estado === "pendiente").length;
+    if (urgentApts > 2) score -= 10;
+    return Math.max(0, Math.min(100, score));
+  }
+
   showAddPetModal() {
     this.editingPetId = null;
     const form = document.getElementById("pet-form");
@@ -319,6 +495,7 @@ class PetCareApp {
       } else {
         db.addPet(data);
         this.showToast("Mascota agregada correctamente", "success");
+        this.triggerConfetti();
       }
       document.getElementById("pet-modal")?.classList.add("hidden");
       this.renderPets();
@@ -572,6 +749,58 @@ class PetCareApp {
     this.renderVetAppointments();
   }
 
+  // ========== CALENDAR ==========
+  renderCalendar() {
+    const year = this.calendarDate.getFullYear();
+    const month = this.calendarDate.getMonth();
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const dayNames = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+
+    document.getElementById("calendar-month-label").innerHTML = `<i class="fa-solid fa-calendar-days"></i> ${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    const walks = db.getAllWalks().filter(w => w.activo);
+    const apts = db.getAllVetAppointments();
+
+    const dayNameToNum = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
+
+    let html = dayNames.map(d => `<div class="calendar-header-cell">${d}</div>`).join("");
+    for (let i = 0; i < firstDay; i++) html += `<div class="calendar-cell empty"></div>`;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayOfWeek = new Date(year, month, day).getDay();
+      const hasWalk = walks.some(w => dayNameToNum[w.diaSemana] === dayOfWeek);
+      const hasApt = apts.some(a => a.fecha === dateStr);
+      const isToday = dateStr === todayStr;
+      const classes = ["calendar-cell"];
+      if (isToday) classes.push("today");
+      if (hasWalk || hasApt) classes.push("has-event");
+      html += `<div class="${classes.join(' ')}">${day}</div>`;
+    }
+
+    document.getElementById("calendar-grid").innerHTML = html;
+  }
+
+  prevMonth() {
+    this.calendarDate.setMonth(this.calendarDate.getMonth() - 1);
+    this.renderCalendar();
+  }
+
+  nextMonth() {
+    this.calendarDate.setMonth(this.calendarDate.getMonth() + 1);
+    this.renderCalendar();
+  }
+
+  goToToday() {
+    this.calendarDate = new Date();
+    this.renderCalendar();
+  }
+
   // ========== ACTIVITIES ==========
   renderActivities() {
     const activities = db.getAllActivities().reverse();
@@ -608,33 +837,61 @@ class PetCareApp {
     };
   }
 
-  // ========== NOTIFICATIONS ==========
-  renderNotifications() {
-    const notifs = db.getAllNotifications().reverse().slice(0, 20);
-    const list = document.getElementById("notif-list");
-    if (!list) return;
-    list.innerHTML = notifs.length === 0
-      ? '<p class="notif-empty">Sin notificaciones</p>'
-      : notifs.map(n => `
-        <div class="notif-item notif-${n.tipo} ${n.leida ? 'notif-read' : ''}" onclick="app.markNotifRead('${n.id}')">
-          <div class="notif-icon"><i class="fa-solid ${n.tipo === 'urgente' ? 'fa-circle-exclamation' : n.tipo === 'alerta' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i></div>
-          <div class="notif-body"><strong>${n.titulo}</strong><p>${n.mensaje}</p><span class="notif-time">${new Date(n.fecha).toLocaleString()}</span></div>
-        </div>`).join("");
-  }
+  // ========== EXPORT ==========
+  exportData(type) {
+    let data = [];
+    let filename = "";
+    let headers = [];
 
-  markNotifRead(id) {
-    db.markNotificationAsRead(id);
-    this.updateNotificationBadge();
-    this.renderNotifications();
-  }
-
-  updateNotificationBadge() {
-    const count = db.getUnreadNotifications().length;
-    const badge = document.getElementById("notif-badge");
-    if (badge) {
-      badge.textContent = count;
-      badge.style.display = count > 0 ? "flex" : "none";
+    switch (type) {
+      case "pets":
+        data = db.getAllPets();
+        filename = "mascotas.csv";
+        headers = ["Nombre", "Especie", "Raza", "Edad", "Peso", "Tamano", "Genero", "Color", "Estado Salud", "Notas"];
+        break;
+      case "walks":
+        data = db.getAllWalks();
+        filename = "paseos.csv";
+        headers = ["Mascota ID", "Dia", "Hora Inicio", "Hora Fin", "Duracion", "Ruta", "Notas", "Activo"];
+        break;
+      case "feeding":
+        data = db.getAllFeeding();
+        filename = "alimentacion.csv";
+        headers = ["Mascota ID", "Tipo Comida", "Cantidad", "Horario", "Frecuencia", "Indicaciones", "Activo"];
+        break;
+      case "vet":
+        data = db.getAllVetAppointments();
+        filename = "citas_veterinarias.csv";
+        headers = ["Mascota ID", "Fecha", "Hora", "Motivo", "Veterinario", "Clinica", "Estado", "Costo", "Diagnostico"];
+        break;
+      case "activities":
+        data = db.getAllActivities();
+        filename = "actividades.csv";
+        headers = ["Mascota ID", "Tipo", "Fecha", "Hora", "Descripcion", "Registrado Por"];
+        break;
     }
+
+    if (data.length === 0) {
+      this.showToast("No hay datos para exportar", "info");
+      return;
+    }
+
+    let csv = headers.join(",") + "\n";
+    data.forEach(row => {
+      const values = Object.values(row).slice(1, -1).map(v => {
+        const str = String(v || "").replace(/"/g, '""');
+        return `"${str}"`;
+      });
+      csv += values.join(",") + "\n";
+    });
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    this.showToast(`Archivo ${filename} exportado`, "success");
   }
 
   // ========== HELPERS ==========
@@ -646,8 +903,8 @@ class PetCareApp {
   }
 
   getSpeciesEmoji(species) {
-    const emojis = { perro: "🐕", gato: "🐱", conejo: "🐇", ave: "🦜", otro: "🐾" };
-    return emojis[species] || "🐾";
+    const emojis = { perro: "\ud83d\udc15", gato: "\ud83d\udc31", conejo: "\ud83d\udc07", ave: "\ud83e\udd9c", otro: "\ud83d\udc3e" };
+    return emojis[species] || "\ud83d\udc3e";
   }
 
   getActivityLabel(type) {
@@ -665,7 +922,7 @@ class PetCareApp {
     requestAnimationFrame(() => toast.classList.add("toast-show"));
     setTimeout(() => {
       toast.classList.remove("toast-show");
-      setTimeout(() => toast.remove(), 300);
+      setTimeout(() => toast.remove(), 400);
     }, 3000);
   }
 
