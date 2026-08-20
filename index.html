@@ -6,9 +6,10 @@
   <title>PetCare Pro - Sistema de Cuidado de Mascotas</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
+  <div id="confetti-container" class="confetti-container"></div>
   <div id="toast-container" class="toast-container"></div>
   <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
@@ -26,6 +27,7 @@
         <li><a href="#" data-section="walks"><i class="fa-solid fa-shoe-prints"></i><span>Paseos</span></a></li>
         <li><a href="#" data-section="feeding"><i class="fa-solid fa-bowl-food"></i><span>Alimentacion</span></a></li>
         <li><a href="#" data-section="vet"><i class="fa-solid fa-stethoscope"></i><span>Veterinaria</span></a></li>
+        <li><a href="#" data-section="calendar"><i class="fa-solid fa-calendar-days"></i><span>Calendario</span></a></li>
         <li><a href="#" data-section="activities"><i class="fa-solid fa-clock-rotate-left"></i><span>Actividades</span></a></li>
       </ul>
     </nav>
@@ -42,6 +44,13 @@
       <button id="mobile-menu-toggle" class="mobile-toggle"><i class="fa-solid fa-bars"></i></button>
       <h1 id="section-title">Dashboard</h1>
       <div class="topbar-actions">
+        <div class="search-bar">
+          <input type="text" id="global-search" placeholder="Buscar mascotas, paseos, citas..." oninput="app.handleSearch(this.value)">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" onclick="app.toggleTheme()" title="Cambiar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
         <button id="notif-btn" class="notif-btn"><i class="fa-solid fa-bell"></i><span id="notif-badge" class="notif-badge">0</span></button>
       </div>
     </header>
@@ -76,7 +85,10 @@
       <section id="section-pets" class="content-section hidden">
         <div class="section-header">
           <p class="section-subtitle">Gestiona todas las mascotas registradas en el sistema</p>
-          <button class="btn btn-primary" onclick="app.showAddPetModal()"><i class="fa-solid fa-plus"></i> Agregar Mascota</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-export" onclick="app.exportData('pets')"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+            <button class="btn btn-primary" onclick="app.showAddPetModal()"><i class="fa-solid fa-plus"></i> Agregar Mascota</button>
+          </div>
         </div>
         <div id="pets-grid" class="pets-grid"></div>
       </section>
@@ -85,7 +97,10 @@
       <section id="section-walks" class="content-section hidden">
         <div class="section-header">
           <p class="section-subtitle">Programa y administra los paseos diarios de cada mascota</p>
-          <button class="btn btn-primary" onclick="app.showAddWalkModal()"><i class="fa-solid fa-plus"></i> Agregar Paseo</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-export" onclick="app.exportData('walks')"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+            <button class="btn btn-primary" onclick="app.showAddWalkModal()"><i class="fa-solid fa-plus"></i> Agregar Paseo</button>
+          </div>
         </div>
         <div class="table-container">
           <table class="data-table">
@@ -99,7 +114,10 @@
       <section id="section-feeding" class="content-section hidden">
         <div class="section-header">
           <p class="section-subtitle">Controla la dieta y horarios de alimentacion de cada mascota</p>
-          <button class="btn btn-primary" onclick="app.showAddFeedingModal()"><i class="fa-solid fa-plus"></i> Agregar Alimentacion</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-export" onclick="app.exportData('feeding')"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+            <button class="btn btn-primary" onclick="app.showAddFeedingModal()"><i class="fa-solid fa-plus"></i> Agregar Alimentacion</button>
+          </div>
         </div>
         <div class="table-container">
           <table class="data-table">
@@ -113,7 +131,10 @@
       <section id="section-vet" class="content-section hidden">
         <div class="section-header">
           <p class="section-subtitle">Registro de citas veterinarias, diagnosticos y tratamientos</p>
-          <button class="btn btn-primary" onclick="app.showAddVetModal()"><i class="fa-solid fa-plus"></i> Agendar Cita</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-export" onclick="app.exportData('vet')"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+            <button class="btn btn-primary" onclick="app.showAddVetModal()"><i class="fa-solid fa-plus"></i> Agendar Cita</button>
+          </div>
         </div>
         <div class="table-container">
           <table class="data-table">
@@ -123,11 +144,34 @@
         </div>
       </section>
 
+      <!-- CALENDARIO -->
+      <section id="section-calendar" class="content-section hidden">
+        <div class="section-header">
+          <p class="section-subtitle">Vista de calendario con paseos y citas programadas</p>
+        </div>
+        <div class="dashboard-card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <h3 id="calendar-month-label"><i class="fa-solid fa-calendar-days"></i> Agosto 2026</h3>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-icon" onclick="app.prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn-icon" onclick="app.goToToday()"><i class="fa-solid fa-crosshairs"></i></button>
+              <button class="btn-icon" onclick="app.nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <div style="padding:16px 20px;">
+            <div id="calendar-grid" class="calendar-grid"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- ACTIVIDADES -->
       <section id="section-activities" class="content-section hidden">
         <div class="section-header">
           <p class="section-subtitle">Historial completo de actividades realizadas con cada mascota</p>
-          <button class="btn btn-primary" onclick="app.showAddActivityModal()"><i class="fa-solid fa-plus"></i> Registrar Actividad</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-export" onclick="app.exportData('activities')"><i class="fa-solid fa-file-csv"></i> Exportar</button>
+            <button class="btn btn-primary" onclick="app.showAddActivityModal()"><i class="fa-solid fa-plus"></i> Registrar Actividad</button>
+          </div>
         </div>
         <div id="activities-list"></div>
       </section>
